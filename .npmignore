@@ -1,0 +1,5 @@
+src/
+coverage/
+.prettierrc
+jest.config.ts
+tsconfig.json
