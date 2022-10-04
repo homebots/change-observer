@@ -1,5 +1,5 @@
 import { Observer } from './observer';
-import jest from 'jest'
+import { jest } from '@jest/globals';
 
 describe('change observer', () => {
   describe('before/after checking for changes', () => {
@@ -78,20 +78,24 @@ describe('change observer', () => {
     });
 
     it('should deeply compare two objects', () => {
-      let value = { one : 1 };
+      let value = { one: '1' };
       const observer = new Observer();
-      const callback = jest.fn()
+      const equals = jest.fn();
+      const same = jest.fn();
 
-      observer.watch({
-        expression: () => value,
-        callback,
-        useEquals: true
-      });
+      observer.watch({ expression: () => value, callback: equals, useEquals: true });
+      observer.watch({ expression: () => value, callback: same, useEquals: false });
 
       observer.markAsDirty();
       observer.check();
 
-      expect(callback).toHaveBeenCalledTimes(1);
+      value.one = 'one';
+
+      observer.markAsDirty();
+      observer.check();
+
+      expect(same).toHaveBeenCalledTimes(1);
+      expect(equals).toHaveBeenCalledTimes(2);
     });
   });
 });
