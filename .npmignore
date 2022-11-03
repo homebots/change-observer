@@ -1,5 +1,7 @@
 src/
 coverage/
 .prettierrc
-jest.config.ts
+karma.conf.js
 tsconfig.json
+rollup.config.js
+test.js

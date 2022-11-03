@@ -1,3 +1,2 @@
-export { Change, ChangeCallback, Changes, Expression, Watcher } from './observer';
-export { ChangeDetector } from './change-observer';
-export { ChangeDetectorTree } from './change-observer-tree';
+export { WatcherCallback as ChangeCallback, Expression, Watcher } from './observer';
+export { TreeObserver } from './tree-observer';

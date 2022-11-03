@@ -1,12 +1,11 @@
 import { Observer } from './observer';
-import { jest } from '@jest/globals';
 
 describe('change observer', () => {
   describe('before/after checking for changes', () => {
     it('should call hooks before/after checking watchers', () => {
       const observer = new Observer();
-      const before = jest.fn();
-      const after = jest.fn();
+      const before = jasmine.createSpy();
+      const after = jasmine.createSpy();
 
       observer.beforeCheck(before);
       observer.afterCheck(after);
@@ -19,7 +18,7 @@ describe('change observer', () => {
 
     it('should not run hooks until an observer is marked as dirty', () => {
       const observer = new Observer();
-      const before = jest.fn();
+      const before = jasmine.createSpy();
 
       observer.beforeCheck(before);
       observer.check();
@@ -38,8 +37,8 @@ describe('change observer', () => {
       let lastValue;
       let firstTime = true;
 
-      const expression = jest.fn(() => value);
-      const callback = jest.fn();
+      const expression = jasmine.createSpy().and.callFake(() => value);
+      const callback = jasmine.createSpy();
       const observer = new Observer();
 
       observer.watch({ expression, callback });
@@ -63,7 +62,7 @@ describe('change observer', () => {
 
     it('should not check for changes until the observer is marked as dirty', () => {
       const observer = new Observer();
-      const expression = jest.fn();
+      const expression = jasmine.createSpy();
 
       observer.watch({ expression });
       observer.check();
@@ -80,8 +79,8 @@ describe('change observer', () => {
     it('should deeply compare two objects', () => {
       let value = { one: '1' };
       const observer = new Observer();
-      const equals = jest.fn();
-      const same = jest.fn();
+      const equals = jasmine.createSpy();
+      const same = jasmine.createSpy();
 
       observer.watch({ expression: () => value, callback: equals, useEquals: true });
       observer.watch({ expression: () => value, callback: same, useEquals: false });

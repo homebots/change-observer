@@ -1,24 +1,15 @@
-import { clone, isEqual } from 'lodash-es';
+import { isEqual, clone } from 'lodash-es';
 
 type AnyFunction = (...args: any[]) => any;
 
-export interface Change<T> {
-  value: T;
-  lastValue: T | undefined;
-  firstTime?: boolean;
-}
-
-export type Changes = Record<string, Change<any>>;
-export type ChangesCallback = (changes: Changes) => void;
-export type ChangeCallback<T> = (newValue: T, oldValue: T | undefined, firstTime: boolean) => void;
+export type WatcherCallback<T> = (newValue: T, oldValue: T | undefined, firstTime: boolean) => void;
 export type Expression<T> = () => T;
 
 export interface Watcher<T = any> {
   expression: Expression<T>;
-  callback?: ChangeCallback<T>;
+  callback?: WatcherCallback<T>;
   lastValue?: T | undefined;
   useEquals?: boolean;
-  property?: string;
   firstTime?: boolean;
 }
 
@@ -27,14 +18,23 @@ export interface IObserver {
   afterCheck(fn: AnyFunction): void;
   check(): void;
   markAsDirty(): void;
-  watch(expression: Watcher): void;
+  watch(watcher: Watcher): void;
 }
 
+export interface Comparator {
+  (value: any, lastValue: any, useEquals: boolean): boolean;
+}
+
+const defaultComparator: Comparator = (newValue, lastValue, useEquals) =>
+  (!useEquals && newValue !== lastValue) || (useEquals && !isEqual(newValue, lastValue));
+
 export class Observer implements IObserver {
-  protected state: 'checking' | 'checked' | 'dirty' = 'checked';
+  protected dirty = false;
   protected watchers: Watcher[] = [];
   protected _afterCheck: AnyFunction[] = [];
   protected _beforeCheck: AnyFunction[] = [];
+
+  constructor(protected comparator: Comparator = defaultComparator) {}
 
   beforeCheck(fn: AnyFunction) {
     this._beforeCheck.push(fn);
@@ -45,7 +45,7 @@ export class Observer implements IObserver {
   }
 
   markAsDirty() {
-    this.state = 'dirty';
+    this.dirty = true;
   }
 
   watch<T>(watcher: Watcher<T>) {
@@ -53,12 +53,11 @@ export class Observer implements IObserver {
   }
 
   check() {
-    if (this.state === 'checked') {
+    if (!this.dirty) {
       return;
     }
 
     this._beforeCheck.forEach((fn) => fn());
-    this.state = 'checking';
 
     for (const watcher of this.watchers) {
       this.checkWatcher(watcher);
@@ -66,23 +65,23 @@ export class Observer implements IObserver {
 
     this._afterCheck.forEach((fn) => fn());
 
-    this.state = 'checked';
+    this.dirty = false;
   }
 
   protected checkWatcher(watcher: Watcher) {
     const newValue = watcher.expression();
     const { firstTime, lastValue, useEquals } = watcher;
-    const hasChanges = (!useEquals && newValue !== lastValue) || (useEquals && !isEqual(newValue, lastValue));
+    const hasChanges = this.comparator(newValue, lastValue, useEquals);
 
     if (!hasChanges) {
-      return false;
+      return;
     }
 
     watcher.firstTime = false;
     watcher.lastValue = useEquals ? clone(newValue) : newValue;
 
     if (watcher.callback) {
-      watcher.callback.apply(null, [newValue, lastValue, firstTime]);
+      watcher.callback(newValue, lastValue, firstTime);
     }
   }
 }

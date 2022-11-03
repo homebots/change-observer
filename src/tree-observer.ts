@@ -1,15 +1,39 @@
-import { ChangeDetector, CheckOptions } from './change-observer';
-import { Observer } from './observer';
+import { IObserver, Observer } from './observer';
 
-let uid = 0;
-const setTimeoutNative = setTimeout;
+export interface CheckOptions {
+  async: boolean;
+}
 
-export class ChangeDetectorTree extends Observer implements ChangeDetector {
-  readonly id = `@${++uid}`;
+export interface ITreeObserver extends IObserver {
+  id: string;
+  root: ITreeObserver;
+  parent?: ITreeObserver;
+  children?: ITreeObserver[];
 
-  root: ChangeDetector = this;
-  parent: ChangeDetector;
-  children: Array<ChangeDetector> = [];
+  scheduleCheck(options?: CheckOptions): void;
+  detectChanges(options?: CheckOptions): Promise<void> | void;
+  detach(): void;
+  adopt(cd: ITreeObserver): void;
+  fork(): ITreeObserver;
+}
+
+export class TreeObserver extends Observer implements ITreeObserver {
+  private static readonly tag = Symbol('ChangeDetector');
+  static uid = 0;
+
+  static getDetectorOf(target: any): TreeObserver {
+    return target[TreeObserver.tag];
+  }
+
+  static setDetectorOf(target: any, detector: TreeObserver): void {
+    target[TreeObserver.tag] = detector;
+  }
+
+  readonly id = `@${++TreeObserver.uid}`;
+
+  root: TreeObserver = this;
+  parent: TreeObserver;
+  children: Array<TreeObserver> = [];
 
   protected timer: any = 0;
   protected promise: Promise<void> | null;
@@ -20,7 +44,7 @@ export class ChangeDetectorTree extends Observer implements ChangeDetector {
     }
   }
 
-  adopt<T extends ChangeDetector>(cd: T) {
+  adopt<T extends TreeObserver>(cd: T) {
     this.children.push(cd);
     cd.parent = this;
     cd.root = this.root;
@@ -62,7 +86,7 @@ export class ChangeDetectorTree extends Observer implements ChangeDetector {
     }
 
     return (this.promise = new Promise<void>((resolve) => {
-      this.timer = setTimeoutNative(() => {
+      this.timer = setTimeout(() => {
         this.check();
         this.timer = 0;
         this.promise = null;
@@ -72,7 +96,7 @@ export class ChangeDetectorTree extends Observer implements ChangeDetector {
   }
 
   fork() {
-    const cd = new ChangeDetectorTree();
+    const cd = new TreeObserver();
     this.adopt(cd);
 
     return cd;
